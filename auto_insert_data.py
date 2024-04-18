@@ -1,27 +1,18 @@
-import pyautogui as pg 
-import time
+
+import mysql.connector
 from faker import Faker
-import os
 import random
+
+host=input('Enter Host: ')
+user=input('Enter User: ')
+password=input('Enter Password: ')
+
 fake = Faker()
 
-
 def job_title():
-    new_i=random.randint(1,49)
     title_names = [
         "CEO (Chief Executive Officer)",
         "CFO (Chief Financial Officer)",
-        "COO (Chief Operating Officer)",
-        "CTO (Chief Technology Officer)",
-        "CMO (Chief Marketing Officer)",
-        "CHRO (Chief Human Resources Officer)",
-        "CIO (Chief Information Officer)",
-        "General Manager",
-        "Project Manager",
-        "Team Lead",
-        "Software Engineer",
-        "Marketing Manager",
-        "Sales Representative",
         "HR Specialist",
         "Accountant",
         "Customer Support Specialist",
@@ -44,74 +35,53 @@ def job_title():
         "Event Coordinator",
         "Content Writer",
         "Social Media Manager",
-        "Customer Success Manager",
-        "Scrum Master",
-        "Database Administrator",
-        "Sales Manager",
-        "Compliance Officer",
-        "Logistics Coordinator",
-        "Front-end Developer",
-        "Back-end Developer",
-        "DevOps Engineer",
-        "Technical Support Specialist",
-        "Facilities Manager",
-        "Public Relations Specialist",
-        "Executive Assistant",
-        "Business Development Manager",
-        "Data Scientist"
     ]
-    return title_names[new_i]
+    return random.choice(title_names)
 
-
-def login():
-    os.startfile("C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\MySQL\\MySQL Server 8.0\\MySQL 8.0 Command Line Client.lnk")
-    time.sleep(1)
-    pg.write('ved24072003')
-    pg.press('enter')
-
-def create_phone_num(n):
-    num=0
-    for i in range(n):
-        num=random.randint(1000000000,9999999999)
-    return num
-
-
-def create_use_db(Database_name):
-    Create_database=f'CREATE DATABASE IF NOT EXISTS {Database_name};'
-    pg.write(Create_database)
-    pg.press('enter')
-    use_db=f'USE {Database_name};'
-    pg.write(use_db)
-    pg.press('enter')
-
-def create_table(table_name):
-    
-    table=f"CREATE TABLE IF NOT EXISTS {table_name} (id INT PRIMARY KEY,username VARCHAR(50),email VARCHAR(100),phone_num BIGINT,salary DOUBLE(12,2),job_title VARCHAR(50));"
-    pg.write(table)
-    pg.press('enter')
+def create_phone_num():
+    return random.randint(1000000000, 9999999999)
 
 def get_email():
-    fake_emails = [fake.email() for _ in range(100)]
-    for idx, email in enumerate(fake_emails, start=1):
-        return email
+    return fake.email()
 
+def create_database_and_table(conn, cursor, database_name, table_name):
+    try:
+        cursor.execute(f"CREATE DATABASE IF NOT EXISTS {database_name}")
+        cursor.execute(f"USE {database_name}")
+        cursor.execute(f"CREATE TABLE IF NOT EXISTS {table_name} (id INT AUTO_INCREMENT PRIMARY KEY, username VARCHAR(50), email VARCHAR(100), phone_num BIGINT, salary INT, job_title VARCHAR(100))")
+        conn.commit()
+        print(f"Database '{database_name}' and table '{table_name}' created successfully.")
+    except mysql.connector.Error as err:
+        print("Error:", err)
 
-def insert_data(no_of_data,table_name):
-    for i in range(no_of_data+1):
-        time.sleep(0.10)
-        pg.write(f"INSERT INTO {table_name} VALUES ({i}, '{get_email()[0:7]}', '{get_email()}', {create_phone_num(no_of_data)},{create_phone_num(no_of_data)//(random.randint(999,99999))}, '{job_title()}');")
-        pg.press('enter')
+def insert_data(cursor, table_name, num_rows):
+    for i in range(num_rows):
+        email = get_email()
+        phone_num = create_phone_num()
+        salary = random.randint(1000, 10000)  
+        job = job_title()
+        cursor.execute(f"INSERT INTO {table_name} (username, email, phone_num, salary, job_title) VALUES (%s, %s, %s, %s, %s)", (email[:7], email, phone_num, salary, job))
 
-DB_name=input("Enter database name: ")
-table_name=input("Enter table name: ")
-no_of_data=int(input("Enter number of data: "))
+try:
+    conn = mysql.connector.connect(
+        host=host,
+        user=user,
+        password=password
+    )
+    cursor = conn.cursor()
 
-time.sleep(1)
+    database_name = input("Enter database name: ")
+    table_name = input("Enter table name: ")
+    num_rows = int(input("Enter number of rows to insert: "))
 
-login()
-create_use_db(DB_name)
-create_table(table_name)
-insert_data(no_of_data,table_name)
+    create_database_and_table(conn, cursor, database_name, table_name)
+    insert_data(cursor, table_name, num_rows)
+    conn.commit()
+    print(f"{num_rows} rows inserted successfully.")
 
+except mysql.connector.Error as err:
+    print("Error:", err)
 
-
+finally:
+    if 'conn' in locals():
+        conn.close()
